@@ -3,7 +3,15 @@
 #include <stdint.h>
 #include "bmp.h"
 
+typedef struct
+{
+    int rgbtRed;
+    int rgbtGreen;
+    int rgbtBlue;
+}LARGERGBTRIPLE;
 
+
+int sobel_gx(BYTE kernel[]);
 int main(void)
 {
     /*if (argc != 4)
@@ -13,19 +21,20 @@ int main(void)
     }*/
 
 
-    RGBTRIPLE a = {10, 20, 30};
-    RGBTRIPLE b = {40, 50, 60};
-    RGBTRIPLE j = {70, 80, 90};
-    RGBTRIPLE d = {110, 130, 140};
-    RGBTRIPLE e = {120, 140, 150};
-    RGBTRIPLE f = {130, 150, 160};
-    RGBTRIPLE g = {200, 210, 220};
-    RGBTRIPLE h = {220, 230, 240};
-    RGBTRIPLE i = {240, 250, 255};
+    RGBTRIPLE a = {0, 20, 30};
+    RGBTRIPLE b = {1, 50, 60};
+    RGBTRIPLE j = {0, 80, 90};
+    RGBTRIPLE d = {0, 130, 140};
+    RGBTRIPLE e = {0, 140, 150};
+    RGBTRIPLE f = {0, 150, 160};
+    RGBTRIPLE g = {0, 210, 220};
+    RGBTRIPLE h = {0, 230, 240};
+    RGBTRIPLE i = {0, 250, 255};
+    RGBTRIPLE image[] = {a, b, j, d, e, f, g, h, i};
 
+/*
     int r = 1;
     int c = 1;
-/*
     RGBTRIPLE image[][] = {{a, b, j}, {d, e, f}, {g, h, i}};
 
 
@@ -37,6 +46,47 @@ int main(void)
 
 
     printf("Average is : %i\n", AVG.rgbtRed);
+
+
 */
-printf("%i\n", a.rgbtGreen);
+
+
+BYTE pixel_data_r[9];
+BYTE pixel_data_g[9];
+BYTE pixel_data_b[9];
+
+for (int q = 0; q < 9; q++)
+{
+    pixel_data_r[q] = image[q].rgbtRed;
+    pixel_data_g[q] = image[q].rgbtGreen;
+    pixel_data_b[q] = image[q].rgbtBlue;
+}
+
+
+LARGERGBTRIPLE sobelx;
+LARGERGBTRIPLE sobely;
+//apply sobel operatior
+sobelx.rgbtRed = sobel_gx(pixel_data_r);
+sobelx.rgbtGreen = sobel_gx(pixel_data_g);
+sobelx.rgbtBlue = sobel_gx(pixel_data_b);
+
+
+
+printf("%i\n", sobelx.rgbtBlue);
+
+}
+
+int sobel_gx(BYTE kernel[])
+{
+    int sum = 0;
+    sum += kernel[0] * -1;
+    sum += kernel[1] * 0;
+    sum += kernel[2] * 1;
+    sum += kernel[3] * -2;
+    sum += kernel[4] * 0;
+    sum += kernel[5] * 2;
+    sum += kernel[6] * -1;
+    sum += kernel[7] * 0;
+    sum += kernel[8] * 1;
+    return sum;
 }

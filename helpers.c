@@ -3,6 +3,16 @@
 #include <cs50.h>
 #include <stdio.h>
 
+typedef struct
+{
+    int rgbtRed;
+    int rgbtGreen;
+    int rgbtBlue;
+}LARGERGBTRIPLE;
+
+int sobel_gx(BYTE kernel[]);
+int sobel_gy(BYTE kernel[]);
+
 // Convert image to grayscale
 void grayscale(int height, int width, RGBTRIPLE image[height][width])
 {
@@ -64,9 +74,6 @@ void blur(int height, int width, RGBTRIPLE image[height][width])
     {
         for (int c = 0; c < width; c++)
         {
-            //edge case (literally)
-            if (true)
-            {
                 //make array of all 9 available neighbors and remove if unavailable
                 int options[] = {true, true, true, true, true, true, true, true, true};
                 if (r == 0)
@@ -108,13 +115,6 @@ void blur(int height, int width, RGBTRIPLE image[height][width])
                     {
                         const int CUR_ROW = floor(r + ((double) i / 3) - 1);
                         const int CUR_COL = c + (i % 3) - 1;
-                        //map number i to pixel number
-                        /*
-                        if (CUR_ROW < 0 || CUR_COL < 0)
-                        {
-                            printf("At %i, %i\n", r, c);
-                            printf("%i : %i,%i\n", i, CUR_ROW, CUR_COL);
-                        }*/
 
                         red_sums += tmp[CUR_ROW][CUR_COL].rgbtRed;
                         green_sums += tmp[CUR_ROW][CUR_COL].rgbtGreen;
@@ -128,24 +128,7 @@ void blur(int height, int width, RGBTRIPLE image[height][width])
                 image[r][c].rgbtGreen = round((double) green_sums / count);
                 image[r][c].rgbtBlue = round((double) blue_sums / count);
 
-            }
-            else
-            {
-                //center pixel, all 9 neighbors usable
-                RGBTRIPLE avg;
-                avg.rgbtRed =  (int) round(((double) image[r-1][c-1].rgbtRed + image[r-1][c].rgbtRed + image[r-1][c+1].rgbtRed + image[r][c-1].rgbtRed + image[r][c].rgbtRed + image[r][c+1].rgbtRed + image[r+1][c-1].rgbtRed + image[r+1][c].rgbtRed + image[r+1][c+1].rgbtRed) / 9);
-                avg.rgbtGreen = (int) round(((double) image[r-1][c-1].rgbtGreen + image[r-1][c].rgbtGreen + image[r-1][c+1].rgbtGreen + image[r][c-1].rgbtGreen + image[r][c].rgbtGreen + image[r][c+1].rgbtGreen + image[r+1][c-1].rgbtGreen + image[r+1][c].rgbtGreen + image[r+1][c+1].rgbtGreen) / 9);
-                avg.rgbtBlue =  (int) round(((double) image[r-1][c-1].rgbtBlue + image[r-1][c].rgbtBlue + image[r-1][c+1].rgbtBlue + image[r][c-1].rgbtBlue + image[r][c].rgbtBlue + image[r][c+1].rgbtBlue + image[r+1][c-1].rgbtBlue + image[r+1][c].rgbtBlue + image[r+1][c+1].rgbtBlue) / 9);
 
-                if (r == 1 && c == 1)
-                {
-                    printf("%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n%i\n", image[r-1][c-1].rgbtRed , image[r-1][c].rgbtRed , image[r-1][c+1].rgbtRed , image[r][c-1].rgbtRed , image[r][c].rgbtRed , image[r][c+1].rgbtRed , image[r+1][c-1].rgbtRed , image[r+1][c].rgbtRed , image[r+1][c+1].rgbtRed);
-                }
-                image[r][c].rgbtRed = avg.rgbtRed;
-                image[r][c].rgbtGreen = avg.rgbtGreen;
-                image[r][c].rgbtBlue = avg.rgbtBlue;
-
-            }
 
         }
     }
@@ -155,5 +138,127 @@ void blur(int height, int width, RGBTRIPLE image[height][width])
 // Detect edges
 void edges(int height, int width, RGBTRIPLE image[height][width])
 {
+    //read is a file of non-edited values to store
+    RGBTRIPLE read[width][height];
+    for(int i = 0; i < height; i++){
+        for(int j = 0; j < width; j++){
+            read[i][j].rgbtRed = image[i][j].rgbtRed;
+            read[i][j].rgbtGreen = image[i][j].rgbtGreen;
+            read[i][j].rgbtBlue = image[i][j].rgbtBlue;
+        }
+    }
+
+
+    for (int r = 0; r < height; r++)
+    {
+        for (int c = 0; c < width; c++)
+        {
+                //make array of all 9 available neighbors and remove if unavailable
+                bool options[] = {true, true, true, true, true, true, true, true, true};
+                if (r == 0)
+                {
+                    //top
+                    options[0] = options[1] = options[2] = false;
+                }
+                else if (r == height - 1)
+                {
+                    //bottom
+                    options[6] = options[7] = options[8] = false;
+                }
+
+                if (c == 0)
+                {
+                    //left
+                    options[0] = options[3] = options[6] = false;
+                }
+                else if (c == width - 1)
+                {
+                    //right
+                    options[2] = options[5] = options[8] = false;
+                }
+
+                //array of pixel data to input to sobel operator
+                //separate into color values fpr function usage
+                BYTE pixel_data_r[9];
+                BYTE pixel_data_g[9];
+                BYTE pixel_data_b[9];
+                for (int i = 0; i < 3; i ++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        const int INDEX = (i * 3) + j;
+
+                        if (options[INDEX])
+                        {
+                            pixel_data_r[INDEX] = read[r + i - 1][c + j - 1].rgbtRed;
+                            pixel_data_g[INDEX] = read[r + i - 1][c + j - 1].rgbtGreen;
+                            pixel_data_b[INDEX] = read[r + i - 1][c + j - 1].rgbtBlue;
+                        }
+                        else
+                        {
+                            pixel_data_r[INDEX] = (BYTE) 0;
+                            pixel_data_g[INDEX] = (BYTE) 0;
+                            pixel_data_b[INDEX] = (BYTE) 0;
+                        }
+                    }
+                }
+
+                LARGERGBTRIPLE sobelx;
+                LARGERGBTRIPLE sobely;
+                //apply sobel operatior
+                sobelx.rgbtRed = sobel_gx(pixel_data_r);
+                sobelx.rgbtGreen = sobel_gx(pixel_data_g);
+                sobelx.rgbtBlue = sobel_gx(pixel_data_b);
+
+                sobely.rgbtRed = sobel_gx(pixel_data_r);
+                sobely.rgbtGreen = sobel_gx(pixel_data_g);
+                sobely.rgbtBlue = sobel_gx(pixel_data_b);
+
+                //in temp to later check if values are over 255
+                LARGERGBTRIPLE tmp_sobel;
+                tmp_sobel.rgbtRed = round(sqrt((sobelx.rgbtRed ^ 2) + (sobely.rgbtRed ^ 2)));
+                tmp_sobel.rgbtGreen = round(sqrt((sobelx.rgbtGreen ^ 2) + (sobely.rgbtGreen ^ 2)));
+                tmp_sobel.rgbtBlue = round(sqrt((sobelx.rgbtBlue ^ 2) + (sobely.rgbtBlue ^ 2)));
+                if (tmp_sobel.rgbtRed > 255) tmp_sobel.rgbtRed = 255;
+                if (tmp_sobel.rgbtGreen > 255) tmp_sobel.rgbtGreen = 255;
+                if (tmp_sobel.rgbtBlue > 255) tmp_sobel.rgbtBlue = 255;
+
+                image[r][c].rgbtRed = tmp_sobel.rgbtRed;
+                image[r][c].rgbtGreen = tmp_sobel.rgbtGreen;
+                image[r][c].rgbtBlue = tmp_sobel.rgbtBlue;
+
+        }
+    }
+
     return;
+}
+
+int sobel_gx(BYTE kernel[])
+{
+    int sum = 0;
+    sum += kernel[0] * -1;
+    sum += kernel[1] * 0;
+    sum += kernel[2] * 1;
+    sum += kernel[3] * -2;
+    sum += kernel[4] * 0;
+    sum += kernel[5] * 2;
+    sum += kernel[6] * -1;
+    sum += kernel[7] * 0;
+    sum += kernel[8] * 1;
+    return sum;
+}
+
+int sobel_gy(BYTE kernel[])
+{
+    int sum = 0;
+    sum += kernel[0] * -1;
+    sum += kernel[1] * -2;
+    sum += kernel[2] * -1;
+    sum += kernel[3] * 0;
+    sum += kernel[4] * 0;
+    sum += kernel[5] * 0;
+    sum += kernel[6] * 1;
+    sum += kernel[7] * 2;
+    sum += kernel[8] * 1;
+    return sum;
 }
